@@ -11,19 +11,53 @@ PROFILE_FILE_NAME = 'profiles.csv'
 API_PATH = "api.clevertap.com"
 
 PROJECT_ID = 'TEST-779-684-5Z6Z'
-PROJECT_PASSCODE = 'e71af7453fc54254b340e50547ffc95b'
+PROJECT_PASSCODE = '2957bd1d8e72415982f9ab679832bdbc'
 
 BUCKET_MAX = 100
 
-COLUMN_USER_ID = "user_id"
-COLUMN_IDFA = "idfa"
-COLUMN_ADID = "adid"
-COLUMN_TYPE = "type"
-COLUMN_TOKEN = "token"
+COLUMN_USER_ID = "User Id"
+COLUMN_DEVICE_ID = "Device ID"
+
+COLUMN_DEVICE_OS = "Device OS"
+COLUMN_TOKEN = "Token"
 COLUMN_CTID = "ctid"
 
-VAL_FCM = "fcm"
-VAL_APNS = "apns"
+COLUMN_NAME = "Name"
+COLUMN_EMAIL = "Email Address"
+
+COLUMN_EMAIL_OPT_IN = "Email Opt In?"
+COLUMN_PUSH_OPT_IN = "Push Opt In?"
+
+COLUMN_CT_TYPE = "ct-type"
+
+CT_TOKEN_TYPE_FCM = "fcm"
+CT_TOKEN_TYPE_APNS = "apns"
+
+VAL_ANDROID = "Android OS"
+VAL_IOS = "ios"
+
+STR_OBJECT_ID = "objectId"
+STR_TS = "ts"
+STR_TYPE = "type"
+STR_HISTORICAL_DATA = "Historical_data"
+STR_YES = "Yes"
+STR_IDENTITY = "identity"
+STR_PROFILE_DATA = "profileData"
+STR_PROFILE = "profile"
+STR_NAME = "Name"
+STR_EMAIL = "Email"
+
+STR_TOKEN_ID = "id"
+STR_TOKEN = "token"
+STR_TOKEN_DATA = "tokenData"
+
+STR_TRUE = "TRUE"
+STR_FALSE = "FALSE"
+
+STR_MSG_PUSH = "MSG-push"
+STR_MSG_EMAIL = "MSG-email"
+
+STR_D = "d"
 
 LOGS_STATUS = 1
 
@@ -85,6 +119,18 @@ def get_ctid_from_adid(adid):
     """    
     return get_ctid_from_hash_string(adid, ANDROID_PREFIX)
 
+def get_ctid_from_device_id(device_id, prefix):
+    """Function to convert device_id to CT id
+
+    Args:
+        device_id (String): Device id of the user
+        prefix (String): Based on android or ios, the prefix can be different
+
+    Returns:
+        String: Well formatted CT id
+    """    
+    return get_ctid_from_hash_string(device_id, prefix)
+
 def get_ctid_from_user_id(user_id, prefix):
     """Function to convert user id to CT id
 
@@ -97,11 +143,11 @@ def get_ctid_from_user_id(user_id, prefix):
     """    
     return get_ctid_from_hash_string(user_id, prefix)
 
-def get_ctid_android(adid, user_id):
-    """Function to get CT id from adid (if available) or user_id for Android
+def get_ctid_android(device_id, user_id):
+    """Function to get CT id from device id (if available) or user_id for Android
 
     Args:
-        adid (String): Android identifier
+        adid (String): Device identifier
         user_id (String): user identifier
 
     Raises:
@@ -110,18 +156,18 @@ def get_ctid_android(adid, user_id):
     Returns:
         String: Well formatted CT id
     """    
-    if len(adid) > 0:
-        return get_ctid_from_adid(adid)
+    if len(device_id) > 0:
+        return get_ctid_from_device_id(device_id, ANDROID_PREFIX)
     elif len(user_id) > 0:
         return get_ctid_from_user_id(user_id, ANDROID_PREFIX)
     else:
         raise Exception("To get ctid, either adid or user id must exist for android")
 
-def get_ctid_ios(idfa, user_id):
-    """Function to get CT id from idfa (if available) or user id for ios
+def get_ctid_ios(device_id, user_id):
+    """Function to get CT id from device_id (if available) or user id for ios
 
     Args:
-        idfa (String): Apple identifier
+        idfa (String): device identifier
         user_id (String): user identifier
 
     Raises:
@@ -130,14 +176,14 @@ def get_ctid_ios(idfa, user_id):
     Returns:
         String: Well formatted CT id
     """    
-    if len(idfa) > 0:
-        return get_ctid_from_idfa(idfa)
+    if len(device_id) > 0:
+        return get_ctid_from_device_id(device_id, IOS_PREFIX)
     elif len(user_id) > 0:
         return get_ctid_from_user_id(user_id, IOS_PREFIX)
     else:
         raise Exception("To get ctid, either idfa or user id must exist for ios")
 
-def get_profile_payload(ctid, identity):
+def get_profile_payload(ctid, identity, name, email, msg_email, msg_push):
     """Function to get a payload json for a user
 
     Args:
@@ -148,15 +194,34 @@ def get_profile_payload(ctid, identity):
         JSON: Profile json
     """    
     profile = {}
-    profile["objectId"] = ctid
-    profile["ts"] = time.time()
-    profile["type"] = "profile"
+    profile[STR_OBJECT_ID] = ctid
+    profile[STR_TS] = round(time.time())
+    profile[STR_TYPE] = STR_PROFILE
     
     data = {}
-    data["Historical_data"] = "Yes"
-    data["identity"] = identity
+    data[STR_HISTORICAL_DATA] = STR_YES
+    if len(identity) > 0:
+        data[STR_IDENTITY] = identity
 
-    profile["profileData"] = data
+    if len(name) > 0:
+        data[STR_NAME] = name
+
+    if len(email) > 0:
+        data[STR_EMAIL] = email
+    
+    if len(msg_email) > 0:
+        if msg_email == STR_TRUE:
+            data[STR_MSG_EMAIL] = True
+        else:
+            data[STR_MSG_EMAIL] = False
+
+    if len(msg_push) > 0:
+        if msg_push == STR_TRUE:
+            data[STR_MSG_PUSH] = True
+        else:
+            data[STR_MSG_PUSH] = False
+
+    profile[STR_PROFILE_DATA] = data
 
     return profile
 
@@ -172,7 +237,15 @@ def get_profiles_list(profiles):
     logger("---get_profiles_list")
     profiles_list = []
     for profile in profiles:
-        profiles_list.append(get_profile_payload(profile["ctid"], profile["user_id"]))
+        print(profile)
+        profiles_list.append(get_profile_payload(
+            profile[COLUMN_CTID], 
+            profile[COLUMN_USER_ID], 
+            profile[COLUMN_NAME], 
+            profile[COLUMN_EMAIL],
+            profile[COLUMN_EMAIL_OPT_IN],
+            profile[COLUMN_PUSH_OPT_IN]
+            ))
     
     return profiles_list
 
@@ -187,7 +260,7 @@ def get_profiles_payload(profiles):
     """    
     logger("--get_profiles_payload")
     payload = {}
-    payload["d"] = get_profiles_list(profiles)
+    payload[STR_D] = get_profiles_list(profiles)
 
     return payload
     
@@ -203,14 +276,14 @@ def get_token_payload(token, type, ctid):
         JSON: Token Json
     """    
     token_payload = {}
-    token_payload["type"] = "token"
-    token_payload["objectId"] = ctid
+    token_payload[STR_TYPE] = STR_TOKEN
+    token_payload[STR_OBJECT_ID] = ctid
 
     data = {}
-    data["id"] = token
-    data["type"] = type
+    data[STR_TOKEN_ID] = token
+    data[STR_TYPE] = type
 
-    token_payload["tokenData"] = data
+    token_payload[STR_TOKEN_DATA] = data
 
     return token_payload
 
@@ -226,7 +299,7 @@ def get_tokens_list(tokens):
     logger("---get_tokens_list")
     tokens_list = []
     for token in tokens:
-        tokens_list.append(get_token_payload(token["token"], token["type"], token["ctid"]))
+        tokens_list.append(get_token_payload(token[COLUMN_TOKEN], token[COLUMN_CT_TYPE], token[COLUMN_CTID]))
     
     return tokens_list    
 
@@ -241,7 +314,7 @@ def get_tokens_payload(tokens):
     """    
     logger("--get_tokens_payload")
     payload = {}
-    payload["d"] = get_tokens_list(tokens)
+    payload[STR_D] = get_tokens_list(tokens)
 
     return payload
 
@@ -310,10 +383,12 @@ def update_profiles(header, old_profiles):
     logger("-update_profiles")
     profiles = convert_profiles(header, old_profiles)
     for profile in profiles:
-        if profile[COLUMN_TYPE] == VAL_FCM:
-            profile[COLUMN_CTID] = get_ctid_android(profile[COLUMN_ADID], profile[COLUMN_USER_ID])
+        if profile[COLUMN_DEVICE_OS] == VAL_ANDROID:
+            profile[COLUMN_CTID] = get_ctid_android(profile[COLUMN_DEVICE_ID], profile[COLUMN_DEVICE_ID])
+            profile[COLUMN_CT_TYPE] = CT_TOKEN_TYPE_FCM
         else:
-            profile[COLUMN_CTID] = get_ctid_ios(profile[COLUMN_IDFA], profile[COLUMN_USER_ID])
+            profile[COLUMN_CTID] = get_ctid_ios(profile[COLUMN_DEVICE_ID], profile[COLUMN_DEVICE_ID])
+            profile[COLUMN_CT_TYPE] = CT_TOKEN_TYPE_APNS
 
     profile_payload = get_profiles_payload(profiles)
     upload_api(profile_payload)
