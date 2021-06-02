@@ -1,4 +1,3 @@
-### From a user profile, create a CT profile with identify and device token
 <mark>Make sure you've updated the constants at the top of file - ct-token-uploads</mark>
 
 - PROJECT ID should match to your account's project id
