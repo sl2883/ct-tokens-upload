@@ -6,7 +6,7 @@ import time
 ##### CONSTANTS #####
 
 ANDROID_PREFIX = '__g'
-IOS_PREFIX = '-g'
+IOS_PREFIX = '-v'
 PROFILE_FILE_NAME = 'profiles.csv'
 API_PATH = "api.clevertap.com"
 
